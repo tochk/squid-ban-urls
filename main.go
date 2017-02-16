@@ -69,9 +69,9 @@ func parseConfig(path string) {
 		fmt.Println(singleUrl.Url)
 		if singleUrl.Reg != nil {
 			*singleUrl.Reg = "(" + *singleUrl.Reg
-			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{ "url": singleUrl.Url, "reg": *singleUrl.Reg,})
+			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": *singleUrl.Reg, })
 		} else {
-			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{ "url": singleUrl.Url, "reg": singleUrl.Reg,})
+			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": singleUrl.Reg, })
 		}
 
 		if err != nil {
@@ -83,7 +83,7 @@ func parseConfig(path string) {
 func main() {
 	flag.Parse()
 	loadConfig(*configFile)
-	
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
