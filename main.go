@@ -1,21 +1,22 @@
 package main
 
 import (
-	"bufio"
-	"os"
+	//"bufio"
+	//"os"
 	"log"
-	"strings"
-	"github.com/jmoiron/sqlx"
+	//"strings"
+	//"github.com/jmoiron/sqlx"
 	_ "github.com/go-sql-driver/mysql"
 	"flag"
 	"io/ioutil"
 	"encoding/json"
-	"fmt"
+	//"fmt"
+	"net/http"
 )
 
 type urlElement struct {
-	url string `db:"url"`
-	reg *string `db:"reg"`
+	Url string `db:"url"`
+	Reg *string `db:"reg"`
 }
 
 var (
@@ -41,7 +42,7 @@ func main() {
 	flag.Parse()
 	loadConfig(*configFile)
 
-	file, err := os.Open("rkn")
+	/*file, err := os.Open("rkn")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,9 +54,9 @@ func main() {
 		tempText = strings.Replace(tempText, "$", "", -1)
 		splittedText := strings.Split(tempText, "(")
 		if len(splittedText) == 1 {
-			urls = append(urls, urlElement{url:splittedText[0], reg:nil})
+			urls = append(urls, urlElement{Url: splittedText[0], Reg: nil})
 		} else {
-			urls = append(urls, urlElement{url:splittedText[0], reg:&splittedText[1]})
+			urls = append(urls, urlElement{Url: splittedText[0], Reg: &splittedText[1]})
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -68,17 +69,30 @@ func main() {
 		log.Print(err)
 	}
 	for _, singleUrl := range urls {
-		fmt.Println(singleUrl.url)
-		if singleUrl.reg != nil {
-			*singleUrl.reg = "(" + *singleUrl.reg
-			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{ "url": singleUrl.url, "reg": *singleUrl.reg,})
+		fmt.Println(singleUrl.Url)
+		if singleUrl.Reg != nil {
+			*singleUrl.Reg = "(" + *singleUrl.Reg
+			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{ "url": singleUrl.Url, "reg": *singleUrl.Reg,})
 		} else {
-			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{ "url": singleUrl.url, "reg": singleUrl.reg,})
+			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{ "url": singleUrl.Url, "reg": singleUrl.Reg,})
 		}
 
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
+	}*/
 
+
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "index.html")
+	})
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	log.Print("Server started at port 4002")
+	err := http.ListenAndServe(":4002", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
