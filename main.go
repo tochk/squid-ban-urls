@@ -80,6 +80,11 @@ func parseConfig(path string) {
 	}
 }
 
+
+func addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func main() {
 	flag.Parse()
 	loadConfig(*configFile)
@@ -89,6 +94,7 @@ func main() {
 	})
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.HandleFunc("/addUrlToDb/", addUrlToDbHandler)
 
 	log.Print("Server started at port 4002")
 	err := http.ListenAndServe(":4002", nil)
