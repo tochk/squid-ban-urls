@@ -14,6 +14,10 @@ import (
 	"strings"
 )
 
+type server struct {
+	Db *sqlx.DB
+}
+
 type urlElement struct {
 	Url string `db:"url"`
 	Reg *string `db:"reg"`
@@ -38,7 +42,7 @@ func loadConfig(path string) error {
 	return json.Unmarshal(jsonData, &config)
 }
 
-func parseConfig(path string) {
+func (s *server) parseConfig(path string) {
 	file, err := os.Open("rkn")
 	if err != nil {
 		log.Fatal(err)
@@ -60,18 +64,13 @@ func parseConfig(path string) {
 		log.Fatal(err)
 	}
 
-	dataBase, err := sqlx.Connect("mysql", config.MysqlLogin+":"+config.MysqlPassword+"@tcp("+config.MysqlHost+")/"+config.MysqlDb+"?charset=utf8")
-	defer dataBase.Close()
-	if err != nil {
-		log.Print(err)
-	}
 	for _, singleUrl := range urls {
 		fmt.Println(singleUrl.Url)
 		if singleUrl.Reg != nil {
 			*singleUrl.Reg = "(" + *singleUrl.Reg
-			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": *singleUrl.Reg, })
+			_, err = s.Db.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": *singleUrl.Reg, })
 		} else {
-			_, err = dataBase.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": singleUrl.Reg, })
+			_, err = s.Db.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": singleUrl.Reg, })
 		}
 
 		if err != nil {
@@ -81,20 +80,23 @@ func parseConfig(path string) {
 }
 
 
-func addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
-
+func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
 	flag.Parse()
 	loadConfig(*configFile)
 
+	s := server{
+		Db: sqlx.MustConnect("mysql", config.MysqlLogin+":"+config.MysqlPassword+"@tcp("+config.MysqlHost+")/"+config.MysqlDb+"?charset=utf8"),
+	}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.HandleFunc("/addUrlToDb/", addUrlToDbHandler)
+	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
 
 	log.Print("Server started at port 4002")
 	err := http.ListenAndServe(":4002", nil)
