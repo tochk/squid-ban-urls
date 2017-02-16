@@ -1,17 +1,17 @@
 package main
 
 import (
-	//"bufio"
-	//"os"
 	"log"
-	//"strings"
-	//"github.com/jmoiron/sqlx"
 	_ "github.com/go-sql-driver/mysql"
 	"flag"
 	"io/ioutil"
 	"encoding/json"
-	//"fmt"
 	"net/http"
+	"github.com/jmoiron/sqlx"
+	"fmt"
+	"os"
+	"bufio"
+	"strings"
 )
 
 type urlElement struct {
@@ -38,11 +38,8 @@ func loadConfig(path string) error {
 	return json.Unmarshal(jsonData, &config)
 }
 
-func main() {
-	flag.Parse()
-	loadConfig(*configFile)
-
-	/*file, err := os.Open("rkn")
+func parseConfig(path string) {
+	file, err := os.Open("rkn")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,10 +77,13 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}*/
+	}
+}
 
-
-
+func main() {
+	flag.Parse()
+	loadConfig(*configFile)
+	
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
