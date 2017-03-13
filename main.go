@@ -80,7 +80,7 @@ func (s *server) parseConfig(path string) {
 }
 
 func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
-	
+
 }
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
@@ -109,4 +109,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
