@@ -13,19 +13,24 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
+	"html/template"
 )
 
 type server struct {
 	Db *sqlx.DB
 }
 
-type urlElement struct {
+type UrlElement struct {
 	Url string `db:"url"`
 	Reg *string `db:"reg"`
 }
 
 type Url string
 
+
+type UrlListTemplateData struct {
+	UrlList []UrlElement
+}
 
 var (
 	configFile = flag.String("Config", "conf.json", "Where to read the Config from")
@@ -52,16 +57,16 @@ func (s *server) parseConfig(path string) {
 		log.Fatal(err)
 	}
 	scanner := bufio.NewScanner(file)
-	urls := make([]urlElement, 0)
+	urls := make([]UrlElement, 0)
 	for scanner.Scan() {
 		tempText := scanner.Text()
 		tempText = strings.Replace(tempText, "^", "", -1)
 		tempText = strings.Replace(tempText, "$", "", -1)
 		splittedText := strings.Split(tempText, "(")
 		if len(splittedText) == 1 {
-			urls = append(urls, urlElement{Url: splittedText[0], Reg: nil})
+			urls = append(urls, UrlElement{Url: splittedText[0], Reg: nil})
 		} else {
-			urls = append(urls, urlElement{Url: splittedText[0], Reg: &splittedText[1]})
+			urls = append(urls, UrlElement{Url: splittedText[0], Reg: &splittedText[1]})
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -98,8 +103,30 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/urlList/", 302)
 }
 
-func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 
+func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded urlList page from %s", r.RemoteAddr)
+	latexTemplate, err := template.ParseFiles("templates/urlList.tmpl.html")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	tx, err := s.Db.Beginx()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	urlList := make([]UrlElement, 0)
+	if err := tx.Select(&urlList, "SELECT url, reg FROM urls"); err != nil {
+		log.Println(err)
+		return
+	}
+	err = latexTemplate.Execute(w, UrlListTemplateData{UrlList: urlList})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	tx.Commit()
 }
 
 func main() {
