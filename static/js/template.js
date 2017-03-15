@@ -14,7 +14,7 @@ jQuery(document).ready(function () {
 });
 var i = 2;
 $("#addNew").click(function () {
-$("#cancel").css("display", "inline-block"), $("#sbm").attr("disabled", "disabled"), macAddrs = $("input.mac_valid"), $(".input_forms").append("<div class='item'><h2 class='title'>Сайт #" + i + "<h2><div class='form-group'><label for='inputUrl' class='col-md-2 control-label'>URL</label><div class='col-md-10'><input type='mac' name='mac"+i + "' class='form-control mac_valid mac' id='inputUrl'           placeholder='URL' required>  <span class='help-block'>Введите URL</span></div></div></div>"), console.log("added"), $("#ttl" + i).mask("+7 (999) 999-9999", {autoclear: !0}), $("input.phone, input.mac, input.name").focusin(function () {
+$("#cancel").css("display", "inline-block"), $("#sbm").attr("disabled", "disabled"), macAddrs = $("input.mac_valid"), $(".input_forms").append("<div class='item'><h2 class='title'>Сайт #" + i + "<h2><div class='form-group'><label for='inputUrl' class='col-md-2 control-label'>URL</label><div class='col-md-10'><input type='mac' name='url"+i + "' class='form-control mac_valid mac' id='inputUrl'           placeholder='URL' required>  <span class='help-block'>Введите URL</span></div></div></div>"), console.log("added"), $("#ttl" + i).mask("+7 (999) 999-9999", {autoclear: !0}), $("input.phone, input.mac, input.name").focusin(function () {
         $(this).parent().parent().removeClass("has-error1")
     });
     var b = "#ttl" + i;

@@ -92,7 +92,7 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	tx := s.Db.MustBegin()
 	for i := 1; i <= len(r.Form); i++ {
-		tx.MustExec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("mac" + strconv.Itoa(i)), "(/.*?)") //TODO replace mac to url
+		tx.MustExec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("url" + strconv.Itoa(i)), "(/.*?)")
 	}
 	tx.Commit()
 	http.Redirect(w, r, "/urlList/", 302)
