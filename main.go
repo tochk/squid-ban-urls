@@ -117,7 +117,7 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	urlList := make([]UrlElement, 0)
-	if err := tx.Select(&urlList, "SELECT url, reg FROM urls"); err != nil {
+	if err := tx.Select(&urlList, "SELECT url, reg FROM urls ORDER BY id DESC"); err != nil {
 		log.Println(err)
 		return
 	}
