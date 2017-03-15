@@ -12,6 +12,7 @@ import (
 	"os"
 	"bufio"
 	"strings"
+	"strconv"
 )
 
 type server struct {
@@ -22,6 +23,9 @@ type urlElement struct {
 	Url string `db:"url"`
 	Reg *string `db:"reg"`
 }
+
+type Url string
+
 
 var (
 	configFile = flag.String("Config", "conf.json", "Where to read the Config from")
@@ -80,7 +84,18 @@ func (s *server) parseConfig(path string) {
 }
 
 func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
-
+	log.Printf("Loaded addUrlToDb page from %s", r.RemoteAddr)
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	tx := s.Db.MustBegin()
+	for i := 1; i <= len(r.Form); i++ {
+		tx.MustExec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("mac" + strconv.Itoa(i)), "(/.*?)") //TODO replace mac to url
+	}
+	tx.Commit()
+	http.Redirect(w, r, "/urlList/", 302)
 }
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
