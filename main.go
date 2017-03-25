@@ -103,6 +103,21 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/urlList/", 302)
 }
 
+func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded deleteUrl page from %s", r.RemoteAddr)
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	tx := s.Db.MustBegin()
+	for i := 1; i <= len(r.Form); i++ {
+		tx.MustExec("DELETE FROM `urls` WHERE `url` = ?", r.PostFormValue("url"))
+	}
+	tx.Commit()
+	http.Redirect(w, r, "/urlList/", 302)
+}
+
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded urlList page from %s", r.RemoteAddr)
@@ -143,6 +158,7 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
+	http.HandleFunc("/deleteUrl/", s.deleteUrlHandler)
 	http.HandleFunc("/urlList/", s.urlListHandler)
 
 	log.Print("Server started at port 4002")
