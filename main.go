@@ -27,7 +27,6 @@ type UrlElement struct {
 
 type Url string
 
-
 type UrlListTemplateData struct {
 	UrlList []UrlElement
 }
@@ -97,7 +96,22 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	tx := s.Db.MustBegin()
 	for i := 1; i <= len(r.Form); i++ {
-		tx.MustExec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("url" + strconv.Itoa(i)), "(/.*?)")
+		tx.MustExec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("url"+strconv.Itoa(i)), "(/.*?)")
+	}
+	tx.Commit()
+	http.Redirect(w, r, "/urlList/", 302)
+}
+
+func (s *server) updateUrlHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded updateUrl page from %s", r.RemoteAddr)
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	tx := s.Db.MustBegin()
+	for i := 1; i <= len(r.Form); i++ {
+		tx.MustExec("UPDATE `urls` SET `url` = ? WHERE `url` = ?", r.PostFormValue("url"), r.PostFormValue("id"))
 	}
 	tx.Commit()
 	http.Redirect(w, r, "/urlList/", 302)
@@ -117,7 +131,6 @@ func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 	http.Redirect(w, r, "/urlList/", 302)
 }
-
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded urlList page from %s", r.RemoteAddr)
@@ -159,6 +172,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
 	http.HandleFunc("/deleteUrl/", s.deleteUrlHandler)
+	http.HandleFunc("/updateUrl/", s.updateUrlHandler)
 	http.HandleFunc("/urlList/", s.urlListHandler)
 
 	log.Print("Server started at port 4002")
