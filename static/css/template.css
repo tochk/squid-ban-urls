@@ -137,3 +137,9 @@ td:first-child {
     table-layout: fixed;
     word-wrap: break-word;
 }
+#doc{
+    height: 300px;
+}
+.link{
+    float: right;
+}
