@@ -1,19 +1,20 @@
 package main
 
 import (
-	"log"
-	_ "github.com/go-sql-driver/mysql"
-	"flag"
-	"io/ioutil"
-	"encoding/json"
-	"net/http"
-	"github.com/jmoiron/sqlx"
-	"fmt"
-	"os"
 	"bufio"
-	"strings"
-	"strconv"
+	"encoding/json"
+	"flag"
+	"fmt"
 	"html/template"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 )
 
 type server struct {
