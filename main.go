@@ -89,7 +89,7 @@ func (s *server) parseConfig(path string) {
 }
 
 func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded addUrlToDb page from %s", r.RemoteAddr)
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	err := r.ParseForm()
 	if err != nil {
 		log.Println(err)
@@ -104,7 +104,7 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) updateUrlHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded updateUrl page from %s", r.RemoteAddr)
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	err := r.ParseForm()
 	if err != nil {
 		log.Println(err)
@@ -119,7 +119,7 @@ func (s *server) updateUrlHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded deleteUrl page from %s", r.RemoteAddr)
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	err := r.ParseForm()
 	if err != nil {
 		log.Println(err)
@@ -134,7 +134,7 @@ func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded urlList page from %s", r.RemoteAddr)
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	latexTemplate, err := template.ParseFiles("templates/urlList.tmpl.html")
 	if err != nil {
 		log.Println(err)
