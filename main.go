@@ -158,6 +158,23 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 }
 
+func (s *server) generateConfig() {
+	_, err := os.Open("rkn_test_conf")
+	if err != nil {
+		log.Println(err)
+	}
+	data := make([]UrlElement, 0, 1000)
+	s.Db.Select(&data, "SELECT DISTINCT url, reg FROM urls ORDER BY id DESC")
+	log.Printf("%#v", data)
+	for _, url := range data {
+		if url.Reg != nil {
+			fmt.Printf("^%s%s$\n", url.Url, *url.Reg)
+		} else {
+			fmt.Printf("^%s(/.*?)$\n", url.Url)
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
 	loadConfig(*configFile)
@@ -165,7 +182,7 @@ func main() {
 	s := server{
 		Db: sqlx.MustConnect("mysql", config.MysqlLogin+":"+config.MysqlPassword+"@tcp("+config.MysqlHost+")/"+config.MysqlDb+"?charset=utf8"),
 	}
-
+	s.generateConfig()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
