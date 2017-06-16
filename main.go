@@ -29,14 +29,10 @@ type UrlElement struct {
 
 type Url string
 
-type UrlListTemplateData struct {
-	UrlList []UrlElement
-}
-
 var (
 	configFile     = flag.String("Config", "conf.json", "Where to read the Config from")
 	servicePort    = flag.Int("Port", 4002, "Application port")
-	configFilePath = flag.String("ConfigFilePath", "/etc/squid/acl/roskomnadzor_add", "Config file path")
+	configFilePath = flag.String("ConfigFilePath", "rkn_test_conf", "Config file path")
 )
 
 var config struct {
@@ -108,31 +104,37 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) updateUrlHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
+	urlId := r.URL.Path[len("/updateUrl/"):]
 	err := r.ParseForm()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	tx := s.Db.MustBegin()
-	for i := 1; i <= len(r.Form); i++ {
-		tx.MustExec("UPDATE `urls` SET `url` = ? WHERE `url` = ?", r.PostFormValue("url"), r.PostFormValue("id"))
+	if len(urlId) != 0 && r.PostFormValue("url") != "" {
+		_, err = s.Db.Exec("UPDATE `urls` SET `url` = ? WHERE `id` = ?", r.PostFormValue("url"), urlId)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
-	tx.Commit()
 	http.Redirect(w, r, "/urlList/", 302)
 }
 
 func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
+	urlId := r.URL.Path[len("/deleteUrl/"):]
 	err := r.ParseForm()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	tx := s.Db.MustBegin()
-	for i := 1; i <= len(r.Form); i++ {
-		tx.MustExec("DELETE FROM `urls` WHERE `url` = ?", r.PostFormValue("url"))
+	if len(urlId) != 0 && r.PostFormValue("url") != "" {
+		_, err = s.Db.Exec("DELETE FROM `urls` WHERE `id` = ?", r.PostFormValue("url"), urlId)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
-	tx.Commit()
 	http.Redirect(w, r, "/urlList/", 302)
 }
 
@@ -143,22 +145,16 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	tx, err := s.Db.Beginx()
-	if err != nil {
-		log.Println(err)
-		return
-	}
 	urlList := make([]UrlElement, 0)
-	if err := tx.Select(&urlList, "SELECT url, reg FROM urls ORDER BY id DESC"); err != nil {
+	if err := s.Db.Select(&urlList, "SELECT url, reg FROM urls ORDER BY id DESC"); err != nil {
 		log.Println(err)
 		return
 	}
-	err = latexTemplate.Execute(w, UrlListTemplateData{UrlList: urlList})
+	err = latexTemplate.Execute(w, urlList)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	tx.Commit()
 }
 
 func (s *server) reload() {
@@ -166,19 +162,26 @@ func (s *server) reload() {
 		acl, err := s.generateConfig()
 		if err != nil {
 			log.Println(err)
+			time.Sleep(time.Second * 30)
+			continue
 		}
-		file, err := os.Create("rkn_test_conf")
+		file, err := os.Create(*configFilePath)
+		if err != nil {
+			log.Println(err)
+			time.Sleep(time.Second * 30)
+			continue
+		}
+		_, err = file.WriteString(acl)
 		if err != nil {
 			log.Println(err)
 		}
-		_, err = file.WriteString(acl)
 		file.Close()
 		time.Sleep(time.Second * 30)
 	}
 }
 
 func (s *server) generateConfig() (acl string, err error) {
-	data := make([]UrlElement, 0, 1000)
+	data := make([]UrlElement, 0)
 	err = s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC")
 	if err != nil {
 		return
@@ -192,7 +195,10 @@ func (s *server) generateConfig() (acl string, err error) {
 
 func main() {
 	flag.Parse()
-	loadConfig(*configFile)
+	err := loadConfig(*configFile)
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Println("Config loaded from " + *configFile)
 
 	s := server{
@@ -214,7 +220,7 @@ func main() {
 	http.HandleFunc("/urlList/", s.urlListHandler)
 
 	log.Print("Server started at port " + strconv.Itoa(*servicePort))
-	err := http.ListenAndServe(":"+strconv.Itoa(*servicePort), nil)
+	err = http.ListenAndServe(":"+strconv.Itoa(*servicePort), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
