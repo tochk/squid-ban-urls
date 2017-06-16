@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -33,7 +34,9 @@ type UrlListTemplateData struct {
 }
 
 var (
-	configFile = flag.String("Config", "conf.json", "Where to read the Config from")
+	configFile     = flag.String("Config", "conf.json", "Where to read the Config from")
+	servicePort    = flag.Int("Port", 4002, "Application port")
+	configFilePath = flag.String("ConfigFilePath", "/etc/squid/acl/roskomnadzor_add", "Config file path")
 )
 
 var config struct {
@@ -158,31 +161,48 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 }
 
-func (s *server) generateConfig() {
-	_, err := os.Open("rkn_test_conf")
-	if err != nil {
-		log.Println(err)
-	}
-	data := make([]UrlElement, 0, 1000)
-	s.Db.Select(&data, "SELECT DISTINCT url, reg FROM urls ORDER BY id DESC")
-	log.Printf("%#v", data)
-	for _, url := range data {
-		if url.Reg != nil {
-			fmt.Printf("^%s%s$\n", url.Url, *url.Reg)
-		} else {
-			fmt.Printf("^%s(/.*?)$\n", url.Url)
+func (s *server) reload() {
+	for {
+		acl, err := s.generateConfig()
+		if err != nil {
+			log.Println(err)
 		}
+		file, err := os.Create("rkn_test_conf")
+		if err != nil {
+			log.Println(err)
+		}
+		_, err = file.WriteString(acl)
+		file.Close()
+		time.Sleep(time.Second * 30)
 	}
+}
+
+func (s *server) generateConfig() (acl string, err error) {
+	data := make([]UrlElement, 0, 1000)
+	err = s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC")
+	if err != nil {
+		return
+	}
+	for _, url := range data {
+		acl += fmt.Sprintf("^%s(.*?)$\n", strings.Replace(url.Url, "/", "\\/", -1))
+	}
+	log.Println("Config generated successfuly")
+	return
 }
 
 func main() {
 	flag.Parse()
 	loadConfig(*configFile)
+	log.Println("Config loaded from " + *configFile)
 
 	s := server{
 		Db: sqlx.MustConnect("mysql", config.MysqlLogin+":"+config.MysqlPassword+"@tcp("+config.MysqlHost+")/"+config.MysqlDb+"?charset=utf8"),
 	}
-	s.generateConfig()
+	defer s.Db.Close()
+	log.Printf("Connected to database on %s", config.MysqlHost)
+
+	go s.reload()
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
@@ -193,8 +213,8 @@ func main() {
 	http.HandleFunc("/updateUrl/", s.updateUrlHandler)
 	http.HandleFunc("/urlList/", s.urlListHandler)
 
-	log.Print("Server started at port 4002")
-	err := http.ListenAndServe(":4002", nil)
+	log.Print("Server started at port " + strconv.Itoa(*servicePort))
+	err := http.ListenAndServe(":"+strconv.Itoa(*servicePort), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
