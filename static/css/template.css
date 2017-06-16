@@ -133,13 +133,20 @@ td:first-child {
     display: block !important;
     overflow: hidden;
 }
-.table{
+
+.table {
     table-layout: fixed;
     word-wrap: break-word;
 }
-#doc{
+
+#doc {
     height: 300px;
 }
-.link{
+
+.link {
     float: right;
+}
+
+.table > tbody > tr:first-child td {
+    border: 0 !important;
 }

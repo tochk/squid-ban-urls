@@ -23,6 +23,7 @@ type server struct {
 }
 
 type UrlElement struct {
+	Id  int `db:"id"`
 	Url string `db:"url"`
 	Reg *string `db:"reg"`
 }
@@ -128,12 +129,10 @@ func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	if len(urlId) != 0 && r.PostFormValue("url") != "" {
-		_, err = s.Db.Exec("DELETE FROM `urls` WHERE `id` = ?", r.PostFormValue("url"), urlId)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+	_, err = s.Db.Exec("DELETE FROM `urls` WHERE `id` = ?", urlId)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 	http.Redirect(w, r, "/urlList/", 302)
 }
@@ -146,7 +145,7 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	urlList := make([]UrlElement, 0)
-	if err := s.Db.Select(&urlList, "SELECT url, reg FROM urls ORDER BY id DESC"); err != nil {
+	if err := s.Db.Select(&urlList, "SELECT id, url, reg FROM urls ORDER BY id DESC"); err != nil {
 		log.Println(err)
 		return
 	}

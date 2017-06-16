@@ -28,16 +28,14 @@
         <thead>
         <tr>
             <th>Url</th>
-            <th>Reg</th>
-            <th>Actions</th>
+            <th></th>
         </tr>
         </thead>
         <tbody>
         {{ range .}}
         <tr>
-            <td>{{ .Url }}</td>
-            <td>{{ .Reg }}</td>
-            <td><a href="#">lol kek cheburek</a></td>
+            <td style="padding: 15px;">{{ .Url }}</td>
+            <td><a style="margin: 0;"  href="/deleteUrl/{{.Id}}" class="btn btn-danger">Delete</a></td>
         </tr>
         {{ end }}
         </tbody>
