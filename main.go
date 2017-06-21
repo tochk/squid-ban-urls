@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -57,12 +58,12 @@ func loadConfig(path string) error {
 }
 
 func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
 	if session.Values["userName"] == nil {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
-	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	err := r.ParseForm()
 	if err != nil {
 		log.Println(err)
@@ -77,12 +78,12 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
 	if session.Values["userName"] == nil {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
-	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	urlId := r.URL.Path[len("/deleteUrl/"):]
 	err := r.ParseForm()
 	if err != nil {
@@ -98,12 +99,12 @@ func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
 	if session.Values["userName"] == nil {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
-	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	latexTemplate, err := template.ParseFiles("templates/urlList.tmpl.html")
 	if err != nil {
 		log.Println(err)
@@ -123,12 +124,21 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) reload() {
 	for {
+		st := time.Now()
 		acl, err := s.generateConfig()
 		if err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 30)
 			continue
 		}
+		log.Printf("Config build finished in %s", time.Now().Sub(st))
+		oldconf, err := ioutil.ReadFile(*configFilePath)
+		if bytes.Equal([]byte(acl), oldconf) {
+			log.Println("Old config matches new")
+			time.Sleep(time.Second * 30)
+			continue
+		}
+		log.Println("Writing new config")
 		file, err := os.Create(*configFilePath)
 		if err != nil {
 			log.Println(err)
@@ -158,12 +168,12 @@ func (s *server) generateConfig() (acl string, err error) {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
 	if session.Values["userName"] != nil {
 		http.Redirect(w, r, "/add/", 302)
 		return
 	}
-	log.Println("Loaded index page from " + r.RemoteAddr)
 	latexTemplate, err := template.ParseFiles("templates/index.tmpl.html")
 	if err != nil {
 		log.Println(err)
@@ -176,14 +186,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
 	if session.Values["userName"] == nil {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
-	log.Println("Loaded add page from " + r.RemoteAddr)
 	latexTemplate, err := template.ParseFiles("templates/add.tmpl.html")
 	if err != nil {
 		log.Println(err)
@@ -278,17 +287,13 @@ func main() {
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/add/", s.addHandler)
 	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
 	http.HandleFunc("/deleteUrl/", s.deleteUrlHandler)
 	http.HandleFunc("/urlList/", s.urlListHandler)
-
-
-
-	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/add/", s.addHandler)
 	http.HandleFunc("/login/", loginHandler)
 	http.HandleFunc("/logout/", logoutHandler)
-
 	log.Print("Server started at port " + strconv.Itoa(*servicePort))
 	err = http.ListenAndServe(":"+strconv.Itoa(*servicePort), nil)
 	if err != nil {
