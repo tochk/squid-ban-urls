@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -15,7 +15,9 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
+	"gopkg.in/ldap.v2"
 )
 
 type server struct {
@@ -34,6 +36,7 @@ var (
 	configFile     = flag.String("Config", "conf.json", "Where to read the Config from")
 	servicePort    = flag.Int("Port", 4002, "Application port")
 	configFilePath = flag.String("ConfigFilePath", "rkn_test_conf", "Config file path")
+	store          = sessions.NewCookieStore([]byte("applicationDataLP"))
 )
 
 var config struct {
@@ -41,6 +44,8 @@ var config struct {
 	MysqlPassword string `json:"mysqlPassword"`
 	MysqlHost     string `json:"mysqlHost"`
 	MysqlDb       string `json:"mysqlDb"`
+	LdapUser      string `json:"ldapUser"`
+	LdapPassword  string `json:"ldapPassword"`
 }
 
 func loadConfig(path string) error {
@@ -49,43 +54,6 @@ func loadConfig(path string) error {
 		return err
 	}
 	return json.Unmarshal(jsonData, &config)
-}
-
-func (s *server) parseConfig(path string) {
-	file, err := os.Open("rkn")
-	if err != nil {
-		log.Fatal(err)
-	}
-	scanner := bufio.NewScanner(file)
-	urls := make([]UrlElement, 0)
-	for scanner.Scan() {
-		tempText := scanner.Text()
-		tempText = strings.Replace(tempText, "^", "", -1)
-		tempText = strings.Replace(tempText, "$", "", -1)
-		splittedText := strings.Split(tempText, "(")
-		if len(splittedText) == 1 {
-			urls = append(urls, UrlElement{Url: splittedText[0], Reg: nil})
-		} else {
-			urls = append(urls, UrlElement{Url: splittedText[0], Reg: &splittedText[1]})
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	for _, singleUrl := range urls {
-		fmt.Println(singleUrl.Url)
-		if singleUrl.Reg != nil {
-			*singleUrl.Reg = "(" + *singleUrl.Reg
-			_, err = s.Db.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": *singleUrl.Reg, })
-		} else {
-			_, err = s.Db.NamedQuery("INSERT INTO `urls` (`url`, `reg`) VALUES (:url, :reg)", map[string]interface{}{"url": singleUrl.Url, "reg": singleUrl.Reg, })
-		}
-
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 }
 
 func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
@@ -192,6 +160,112 @@ func (s *server) generateConfig() (acl string, err error) {
 	return
 }
 
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "applicationData")
+	if session.Values["userName"] != nil {
+		http.Redirect(w, r, "/servers/", 302)
+		return
+	}
+	if len(r.URL.Path[len("/"):]) > 0 {
+		return
+	}
+	log.Println("Loaded index page from " + r.RemoteAddr)
+	latexTemplate, err := template.ParseFiles("templates/index.tmpl.html")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = latexTemplate.Execute(w, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+
+func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "applicationData")
+	if session.Values["userName"] == nil {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	log.Println("Loaded add page from " + r.RemoteAddr)
+	latexTemplate, err := template.ParseFiles("templates/add.tmpl.html")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = latexTemplate.Execute(w, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+func auth(login, password string) (username string, err error) {
+	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", "main.sgu.ru", 389))
+	if err != nil {
+		return
+	}
+	defer l.Close()
+
+	err = l.Bind(config.LdapUser, config.LdapPassword)
+	if err != nil {
+		return
+	}
+
+	searchRequest := ldap.NewSearchRequest(
+		"dc=main,dc=sgu,dc=ru",
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		"(&(sAMAccountName="+login+"))",
+		[]string{"cn"},
+		nil,
+	)
+
+	sr, err := l.Search(searchRequest)
+	if err != nil {
+		return
+	}
+
+	if len(sr.Entries) == 1 {
+		username = sr.Entries[0].GetAttributeValue("cn")
+	} else {
+		err = errors.New("User not found")
+		return
+	}
+
+	err = l.Bind(username, password)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Loaded login page from " + r.RemoteAddr)
+	r.ParseForm()
+	session, _ := store.Get(r, "applicationData")
+	userName, err := auth(r.Form["login"][0], r.Form["password"][0])
+	if err != nil {
+		http.Redirect(w, r, "/", 302)
+	} else {
+		session, _ = store.Get(r, "applicationData")
+		session.Values["userName"] = userName
+		session.Save(r, w)
+		http.Redirect(w, r, "/servers/", 302)
+	}
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Loaded logout page from " + r.RemoteAddr)
+	session, _ := store.Get(r, "applicationData")
+	session, _ = store.Get(r, "applicationData")
+	session.Values["userName"] = nil
+	session.Save(r, w)
+	http.Redirect(w, r, "/", 302)
+}
+
 func main() {
 	flag.Parse()
 	err := loadConfig(*configFile)
@@ -208,15 +282,19 @@ func main() {
 
 	go s.reload()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
-	})
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
 	http.HandleFunc("/deleteUrl/", s.deleteUrlHandler)
 	http.HandleFunc("/updateUrl/", s.updateUrlHandler)
 	http.HandleFunc("/urlList/", s.urlListHandler)
+
+
+
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/add/", s.addHandler)
+	http.HandleFunc("/login/", loginHandler)
+	http.HandleFunc("/logout/", logoutHandler)
 
 	log.Print("Server started at port " + strconv.Itoa(*servicePort))
 	err = http.ListenAndServe(":"+strconv.Itoa(*servicePort), nil)

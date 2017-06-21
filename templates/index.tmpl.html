@@ -21,37 +21,36 @@
                 </button>
                 <a class="navbar-brand" href="/">Kirino</a>
             </div>
+            <div class="navbar-collapse collapse navbar-responsive-collapse">
+            </div>
         </div>
     </div>
-    <div>
-    <table class="table table-striped table-hover" id="someid" style="width: 80%; margin: 0 auto">
-        <thead>
-        <tr>
-            <th>Url</th>
-            <th>Action</th>
-        </tr>
-        </thead>
-        <tbody>
-        {{ range .}}
-        <tr>
-            <td style="padding: 15px;">{{ .Url }}</td>
-            <td><a style="margin: 0;"  href="/deleteUrl/{{.Id}}" class="btn btn-danger">Delete</a></td>
-        </tr>
-        {{ end }}
-        </tbody>
-    </table>
-    </div>
+    <form class="form-horizontal" action="/login/" method="post">
+        <fieldset id="form_cont">
+            <legend>Auth</legend>
+                <div class="bs-component">
+                    <div class="form-group label-floating">
+                        <label class="control-label" for="login">Login</label>
+                        <input class="form-control" id="login" type="text" name="login">
+                    </div>
+                    <div class="form-group label-floating">
+                        <label class="control-label" for="password">Password</label>
+                        <input class="form-control" id="password" type="password" name="password">
+                    </div>
+                    <div class="">
+                        <button type="submit" class="btn btn-primary">Log in</button>
+                    </div>
+                </div>
 
+        </fieldset>
+    </form>
 </div>
-<div id="black-block"></div>
+
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 <script src="/static/js/bootstrap.min.js"></script>
 <script src="/static/js/ripples.min.js"></script>
 <script src="/static/js/material.min.js"></script>
-<script src="/static/js/template.js"></script>
-<script src="/static/js/jquery.maskedinput.min.js"></script>
 <script>$.material.init();</script>
-<script src="https://fezvrasta.github.io/snackbarjs/dist/snackbar.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/6.2.0/jquery.nouislider.min.js"></script>
+
 </body>
 </html>

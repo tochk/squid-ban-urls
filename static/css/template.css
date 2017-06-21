@@ -1,5 +1,5 @@
 .form-horizontal {
-    width: 900px;
+    width: 500px;
     margin: 0 auto
 }
 
@@ -149,4 +149,19 @@ td:first-child {
 
 .table > tbody > tr:first-child td {
     border: 0 !important;
+}
+.label-floating{
+    display: block !important;
+    float: inherit;
+    margin-right: 0px !important;
+    margin-left: 0 !important;
+}
+.form-group.label-floating label.control-label, .form-group.label-placeholder label.control-label{
+top:-17px;
+}
+.form-group.label-floating.is-focused label.control-label, .form-group.label-floating:not(.is-empty) label.control-label, .form-group.label-static label.control-label{
+/*left: 14px;*/
+}
+.btn-primary{
+float: right;
 }
