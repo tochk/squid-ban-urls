@@ -21,6 +21,16 @@
                 </button>
                 <a class="navbar-brand" href="/">Kirino</a>
             </div>
+            <div class="navbar-collapse collapse navbar-responsive-collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="/add/">Add URL</a></li>
+                    <li class="active"><a href="/urlList/">URL List</a></li>
+                </ul>
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="/logout/">Logout</a></li>
+                </ul>
+            </div>
         </div>
     </div>
     <div>
@@ -28,14 +38,14 @@
         <thead>
         <tr>
             <th>Url</th>
-            <th>Action</th>
+            <th class="col-xs-2">Action</th>
         </tr>
         </thead>
         <tbody>
         {{ range .}}
         <tr>
             <td style="padding: 15px;">{{ .Url }}</td>
-            <td><a style="margin: 0;"  href="/deleteUrl/{{.Id}}" class="btn btn-danger">Delete</a></td>
+            <td class="col-xs-2"><a style="margin: 0; padding-right: 20px" href="/deleteUrl/{{.Id}}" class="btn btn-danger">Delete</a></td>
         </tr>
         {{ end }}
         </tbody>

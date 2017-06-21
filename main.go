@@ -57,6 +57,11 @@ func loadConfig(path string) error {
 }
 
 func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "applicationData")
+	if session.Values["userName"] == nil {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	err := r.ParseForm()
 	if err != nil {
@@ -71,25 +76,12 @@ func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/urlList/", 302)
 }
 
-func (s *server) updateUrlHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
-	urlId := r.URL.Path[len("/updateUrl/"):]
-	err := r.ParseForm()
-	if err != nil {
-		log.Println(err)
+func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "applicationData")
+	if session.Values["userName"] == nil {
+		http.Redirect(w, r, "/", 302)
 		return
 	}
-	if len(urlId) != 0 && r.PostFormValue("url") != "" {
-		_, err = s.Db.Exec("UPDATE `urls` SET `url` = ? WHERE `id` = ?", r.PostFormValue("url"), urlId)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-	http.Redirect(w, r, "/urlList/", 302)
-}
-
-func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	urlId := r.URL.Path[len("/deleteUrl/"):]
 	err := r.ParseForm()
@@ -106,6 +98,11 @@ func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "applicationData")
+	if session.Values["userName"] == nil {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	latexTemplate, err := template.ParseFiles("templates/urlList.tmpl.html")
 	if err != nil {
@@ -163,10 +160,7 @@ func (s *server) generateConfig() (acl string, err error) {
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "applicationData")
 	if session.Values["userName"] != nil {
-		http.Redirect(w, r, "/servers/", 302)
-		return
-	}
-	if len(r.URL.Path[len("/"):]) > 0 {
+		http.Redirect(w, r, "/add/", 302)
 		return
 	}
 	log.Println("Loaded index page from " + r.RemoteAddr)
@@ -253,7 +247,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		session, _ = store.Get(r, "applicationData")
 		session.Values["userName"] = userName
 		session.Save(r, w)
-		http.Redirect(w, r, "/servers/", 302)
+		http.Redirect(w, r, "/add/", 302)
 	}
 }
 
@@ -286,7 +280,6 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
 	http.HandleFunc("/deleteUrl/", s.deleteUrlHandler)
-	http.HandleFunc("/updateUrl/", s.updateUrlHandler)
 	http.HandleFunc("/urlList/", s.urlListHandler)
 
 

@@ -22,10 +22,18 @@
                 <a class="navbar-brand" href="/">Kirino</a>
             </div>
             <div class="navbar-collapse collapse navbar-responsive-collapse">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="/add/">Add URL</a></li>
+                    <li><a href="/urlList/">URL List</a></li>
+                </ul>
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="/logout/">Logout</a></li>
+                </ul>
             </div>
         </div>
     </div>
-    <form class="form-horizontal" action="/addUrlToDb/" method="post">
+    <form class="form-horizontal" action="/addUrlToDb/" method="post" style="width: 800px">
         <fieldset id="form_cont">
             <legend>Добавление сайта</legend>
             <div class="input_forms">
