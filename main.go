@@ -49,6 +49,7 @@ var config struct {
 	MysqlDb       string `json:"mysqlDb"`
 	LdapUser      string `json:"ldapUser"`
 	LdapPassword  string `json:"ldapPassword"`
+	LdapBaseDN string `json:"ldapBaseDN"`
 }
 
 func loadConfig(path string) error {
@@ -233,7 +234,7 @@ func auth(login, password string) (username string, err error) {
 	}
 
 	searchRequest := ldap.NewSearchRequest(
-		"dc=main,dc=sgu,dc=ru",
+		config.LdapBaseDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(&(sAMAccountName="+login+"))",
 		[]string{"cn"},
@@ -299,9 +300,9 @@ func main() {
 	defer s.Db.Close()
 	log.Printf("Connected to database on %s", config.MysqlHost)
 
-	/*if s.dc, err = dbus.New(); err != nil {
+	if s.dc, err = dbus.New(); err != nil {
 		log.Fatal(err)
-	}*/
+	}
 
 	go s.reload()
 
