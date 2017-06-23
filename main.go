@@ -11,8 +11,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/coreos/go-systemd/dbus"
@@ -273,7 +273,7 @@ func (s *server) generateConfig() (acl string, err error) {
 		return
 	}
 	for _, url := range data {
-		acl += fmt.Sprintf("^%s(.*?)$\n", strings.Replace(url.Url, "/", "\\/", -1))
+		acl += fmt.Sprintf("^%s(.*?)$\n", regexp.QuoteMeta(url.Url))
 	}
 	log.Println("Config generated successfuly")
 	return
