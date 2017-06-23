@@ -247,7 +247,7 @@ func (s *server) reload() error {
 	ch := make(chan string, 1)
 	log.Println("Restarting squid")
 	st = time.Now()
-	id, err := s.dc.RestartUnit("squid.service", "fail", ch)
+	id, err := s.dc.ReloadOrTryRestartUnit("squid.service", "fail", ch)
 	if err != nil {
 		return err
 	}
