@@ -266,17 +266,16 @@ func (s *server) run() {
 	}
 }
 
-func (s *server) generateConfig() (acl string, err error) {
-	data := make([]UrlElement, 0)
-	err = s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC")
-	if err != nil {
-		return
+func (s *server) generateConfig() (string, error) {
+	var data []UrlElement
+	if err = s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC"); err != nil {
+		return "", err
 	}
-	for _, url := range data {
-		acl += fmt.Sprintf("^%s(.*?)$\n", regexp.QuoteMeta(url.Url))
+	r := make([]string, 0, len(data))
+	for _, v := range data {
+		r = append(r, "^" + regexp.QuoteMeta(v.Url) + ".*$")
 	}
-	log.Println("Config generated successfuly")
-	return
+	return strings.Join(r, "\n"), nil
 }
 
 func main() {
