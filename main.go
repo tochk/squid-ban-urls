@@ -49,7 +49,7 @@ var config struct {
 	MysqlDb       string `json:"mysqlDb"`
 	LdapUser      string `json:"ldapUser"`
 	LdapPassword  string `json:"ldapPassword"`
-	LdapBaseDN string `json:"ldapBaseDN"`
+	LdapBaseDN    string `json:"ldapBaseDN"`
 }
 
 func loadConfig(path string) error {
@@ -123,64 +123,6 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-}
-
-func (s *server) reload() {
-	for {
-		st := time.Now()
-		acl, err := s.generateConfig()
-		if err != nil {
-			log.Println(err)
-			time.Sleep(time.Second * 30)
-			continue
-		}
-		log.Printf("Config build finished in %s", time.Now().Sub(st))
-		oldconf, err := ioutil.ReadFile(*configFilePath)
-		if bytes.Equal([]byte(acl), oldconf) {
-			log.Println("Old config matches new")
-			time.Sleep(time.Second * 30)
-			continue
-		}
-		log.Println("Writing new config")
-		file, err := os.Create(*configFilePath)
-		if err != nil {
-			log.Println(err)
-			time.Sleep(time.Second * 30)
-			continue
-		}
-		_, err = file.WriteString(acl)
-		if err != nil {
-			log.Println(err)
-		}
-
-		log.Printf("Write finished in %s", time.Now().Sub(st))
-		ch := make(chan string, 1)
-		log.Println("Restarting squid")
-		st = time.Now()
-		id, err := s.dc.RestartUnit("squid.service", "fail", ch)
-		if err != nil {
-			time.Sleep(time.Second * 30)
-			continue
-		}
-		log.Printf("Job id: %d", id)
-		res := <-ch
-		log.Printf("Result: %s in %s", res, time.Now().Sub(st))
-		file.Close()
-		time.Sleep(time.Second * 30)
-	}
-}
-
-func (s *server) generateConfig() (acl string, err error) {
-	data := make([]UrlElement, 0)
-	err = s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC")
-	if err != nil {
-		return
-	}
-	for _, url := range data {
-		acl += fmt.Sprintf("^%s(.*?)$\n", strings.Replace(url.Url, "/", "\\/", -1))
-	}
-	log.Println("Config generated successfuly")
-	return
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -285,6 +227,58 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", 302)
 }
 
+func (s *server) reload() error {
+	st := time.Now()
+	newconf, err := s.generateConfig()
+	if err != nil {
+		return err
+	}
+	log.Printf("Config build finished in %s", time.Now().Sub(st))
+	oldconf, err := ioutil.ReadFile(*configFilePath)
+	if bytes.Equal([]byte(newconf), oldconf) {
+		log.Println("Old config matches new")
+		return nil
+	}
+	log.Println("Writing new config")
+	if err = ioutil.WriteFile(*configFilePath, []byte(newconf), os.ModePerm); err != nil {
+		return err
+	}
+	log.Printf("Write finished in %s", time.Now().Sub(st))
+	ch := make(chan string, 1)
+	log.Println("Restarting squid")
+	st = time.Now()
+	id, err := s.dc.RestartUnit("squid.service", "fail", ch)
+	if err != nil {
+		return err
+	}
+	log.Printf("Job id: %d", id)
+	res := <-ch
+	log.Printf("Result: %s in %s", res, time.Now().Sub(st))
+	return nil
+}
+
+func (s *server) run() {
+	for {
+		if err := s.reload(); err != nil {
+			log.Printf("reload error: %s", err)
+		}
+		time.Sleep(time.Second * 30)
+	}
+}
+
+func (s *server) generateConfig() (acl string, err error) {
+	data := make([]UrlElement, 0)
+	err = s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC")
+	if err != nil {
+		return
+	}
+	for _, url := range data {
+		acl += fmt.Sprintf("^%s(.*?)$\n", strings.Replace(url.Url, "/", "\\/", -1))
+	}
+	log.Println("Config generated successfuly")
+	return
+}
+
 func main() {
 	flag.Parse()
 	err := loadConfig(*configFile)
@@ -300,11 +294,11 @@ func main() {
 	defer s.Db.Close()
 	log.Printf("Connected to database on %s", config.MysqlHost)
 
-	if s.dc, err = dbus.New(); err != nil {
+	/*if s.dc, err = dbus.New(); err != nil {
 		log.Fatal(err)
-	}
+	}*/
 
-	go s.reload()
+	go s.run()
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
