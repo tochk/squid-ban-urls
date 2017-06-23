@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 	"gopkg.in/ldap.v2"
+	"strings"
 )
 
 type server struct {
@@ -268,7 +269,7 @@ func (s *server) run() {
 
 func (s *server) generateConfig() (string, error) {
 	var data []UrlElement
-	if err = s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC"); err != nil {
+	if err := s.Db.Select(&data, "SELECT DISTINCT url FROM urls ORDER BY id DESC"); err != nil {
 		return "", err
 	}
 	r := make([]string, 0, len(data))
