@@ -13,6 +13,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-systemd/dbus"
@@ -20,7 +21,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 	"gopkg.in/ldap.v2"
-	"strings"
 )
 
 type server struct {
