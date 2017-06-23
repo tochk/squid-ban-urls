@@ -17,11 +17,11 @@ jQuery(document).ready(function () {
 if (i == null) {
     var i = 1;
 }
-$("#addNew").click(function (){
-   addNew(""); 
+$("#addNew").click(function () {
+    addNew("");
 });
-function addNew (url) {
-$("#cancel").css("display", "inline-block"), $("#sbm").attr("disabled", "disabled"), macAddrs = $("input.mac_valid"), $(".input_forms").append(`
+function addNew(url) {
+    $("#cancel").css("display", "inline-block"), $("#sbm").attr("disabled", "disabled"), macAddrs = $("input.mac_valid"), $(".input_forms").append(`
             <div class='item'>
                 <h2 class='title'>Сайт #` + i + `<h2>
                 <div class='form-group'>
@@ -31,66 +31,77 @@ $("#cancel").css("display", "inline-block"), $("#sbm").attr("disabled", "disable
                     <span class='help-block'>Введите URL</span>
                     <a class="btn btn-primary link">Удалить ссылку</a>
                 </div></div></div>`),
-    $("input[name =url" + i +"]").val(url),
-    i++, console.log("added"), $("#ttl" + i).mask("+7 (999) 999-9999", {autoclear: !0}), $("input.phone, input.mac, input.name").focusin(function () {
+        $("input[name =url" + i + "]").val(url),
+        i++, console.log("added"), $("#ttl" + i).mask("+7 (999) 999-9999", {autoclear: !0}), $("input.phone, input.mac, input.name").focusin(function () {
         $(this).parent().parent().removeClass("has-error1")
     });
     var b = "#ttl" + i;
     var numb = null;
-    $(".link").click(function(){
-            $(this).parent().parent().parent().parent().remove();
-            console.log("deleted");
-            let w = 1;
-            $(".item").each(function(){
-                $(this).children(".title").text("Сайт#"+w); 
-                $(this).children("h2:last-child").children(".form-group").children(".col-md-10").children("input").attr("name","url"+w);
-                w++; 
-            });
-            if ($("input.mac").val() == undefined){$("#sbm").attr("disabled","disabled");}
-            i = w;
-            w = 1;
+    $(".link").click(function () {
+        $(this).parent().parent().parent().parent().remove();
+        console.log("deleted");
+        let w = 1;
+        $(".item").each(function () {
+            $(this).children(".title").text("Сайт#" + w);
+            $(this).children("h2:last-child").children(".form-group").children(".col-md-10").children("input").attr("name", "url" + w);
+            w++;
         });
+        if ($("input.mac").val() == undefined) {
+            $("#sbm").attr("disabled", "disabled");
+        }
+        i = w;
+        w = 1;
+    });
 }
 $("input.mac").each(function () {
-            0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success")) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))
-        }),
-$("input.mac").each(function () {
-            if (0 == CheckMACAddress($(this).val()))return $("#sbm").attr("disabled", "disabled"), console.log("mE" + i), c = !1, !1
-        }),
+    0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success")) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))
+}),
+    $("input.mac").each(function () {
+        if (0 == CheckMACAddress($(this).val()))return $("#sbm").attr("disabled", "disabled"), console.log("mE" + i), c = !1, !1
+    }),
 
-jQuery(document).ready(function () {
+    jQuery(document).ready(function () {
 
-  
+
         //console.log(111);
         let links = new Array();
-        $("#addText").on('click', function(e){
+        $("#addText").on('click', function (e) {
             var mess = $("#doc").val();
             //console.log(mess);
-            var reg =  /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+            var reg = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
             pregMatch = mess.match(reg);
-            mess = mess.replace(reg, function(s){
+            mess = mess.replace(reg, function (s) {
                 let str = (/:\/\//.exec(s) === null ? "http://" + s : s );
                 links.push(str);
                 return null;//"<a href=\""+ str + "\">" + str /*s*/ + "</a>"; 
             });
-            links.forEach(function(item) {
+            links.forEach(function (item) {
                 addNew(item);
             });
             let allOn = true;
             $("input.mac").each(function () {
-            0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success"),allOn = false) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))});
-            if (allOn == true){ $("#sbm").removeAttr("disabled");}
-            if ($("input.mac").val() == undefined){$("#sbm").attr("disabled","disabled");}
-            $("input.mac").focusout(function () { 
+                0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success"), allOn = false) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))
+            });
+            if (allOn == true) {
+                $("#sbm").removeAttr("disabled");
+            }
+            if ($("input.mac").val() == undefined) {
+                $("#sbm").attr("disabled", "disabled");
+            }
+            $("input.mac").focusout(function () {
                 allOn = true;
-    $("input.mac").each(function () {
-            0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success"), allOn = false) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))});
-            if (allOn == true){ $("#sbm").removeAttr("disabled");}
-            });           
-$("input.mac").keyup(function () { 
                 $("input.mac").each(function () {
-            0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success")) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))});
-}); 
+                    0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success"), allOn = false) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))
+                });
+                if (allOn == true) {
+                    $("#sbm").removeAttr("disabled");
+                }
+            });
+            $("input.mac").keyup(function () {
+                $("input.mac").each(function () {
+                    0 == CheckMACAddress($(this).val()) ? ($(this).parent().parent().addClass("has-error1"), $(this).parent().parent().removeClass("has-success")) : ($(this).parent().parent().addClass("has-success"), $(this).parent().parent().removeClass("has-error1"))
+                });
+            });
             //console.log(links);
         });
-});
+    });

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-systemd/dbus"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
@@ -23,6 +24,7 @@ import (
 
 type server struct {
 	Db *sqlx.DB
+	dc *dbus.Conn
 }
 
 type UrlElement struct {
@@ -149,6 +151,19 @@ func (s *server) reload() {
 		if err != nil {
 			log.Println(err)
 		}
+
+		log.Printf("Write finished in %s", time.Now().Sub(st))
+		ch := make(chan string, 1)
+		log.Println("Restarting squid")
+		st = time.Now()
+		id, err := s.dc.RestartUnit("squid.service", "fail", ch)
+		if err != nil {
+			time.Sleep(time.Second * 30)
+			continue
+		}
+		log.Printf("Job id: %d", id)
+		res := <-ch
+		log.Printf("Result: %s in %s", res, time.Now().Sub(st))
 		file.Close()
 		time.Sleep(time.Second * 30)
 	}
@@ -280,8 +295,13 @@ func main() {
 	s := server{
 		Db: sqlx.MustConnect("mysql", config.MysqlLogin+":"+config.MysqlPassword+"@tcp("+config.MysqlHost+")/"+config.MysqlDb+"?charset=utf8"),
 	}
+
 	defer s.Db.Close()
 	log.Printf("Connected to database on %s", config.MysqlHost)
+
+	/*if s.dc, err = dbus.New(); err != nil {
+		log.Fatal(err)
+	}*/
 
 	go s.reload()
 
