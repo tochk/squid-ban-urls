@@ -294,9 +294,9 @@ func main() {
 	defer s.Db.Close()
 	log.Printf("Connected to database on %s", config.MysqlHost)
 
-	/*if s.dc, err = dbus.New(); err != nil {
+	if s.dc, err = dbus.New(); err != nil {
 		log.Fatal(err)
-	}*/
+	}
 
 	go s.run()
 
