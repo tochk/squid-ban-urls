@@ -29,8 +29,8 @@ type server struct {
 }
 
 type UrlElement struct {
-	Id  int `db:"id"`
-	Url string `db:"url"`
+	Id  int     `db:"id"`
+	Url string  `db:"url"`
 	Reg *string `db:"reg"`
 }
 
@@ -39,8 +39,8 @@ type Url string
 var (
 	configFile     = flag.String("Config", "conf.json", "Where to read the Config from")
 	servicePort    = flag.Int("Port", 4002, "Application port")
-	configFilePath = flag.String("ConfigFilePath", "rkn_test_conf", "Config file path")
-	store          = sessions.NewCookieStore([]byte("applicationDataLP"))
+	configFilePath = flag.String("ConfigFilePath", "squid_acl", "Config file path")
+	store          = sessions.NewCookieStore([]byte(config.SessionKey))
 )
 
 var config struct {
@@ -51,6 +51,7 @@ var config struct {
 	LdapUser      string `json:"ldapUser"`
 	LdapPassword  string `json:"ldapPassword"`
 	LdapBaseDN    string `json:"ldapBaseDN"`
+	SessionKey    string `json:"sessionKey"`
 }
 
 func loadConfig(path string) error {
@@ -273,7 +274,7 @@ func (s *server) generateConfig() (string, error) {
 	}
 	r := make([]string, 0, len(data))
 	for _, v := range data {
-		r = append(r, "^" + regexp.QuoteMeta(v.Url) + ".*$")
+		r = append(r, "^"+regexp.QuoteMeta(v.Url)+".*$")
 	}
 	return strings.Join(r, "\n"), nil
 }
