@@ -222,7 +222,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Loaded logout page from " + r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
-	session, _ = store.Get(r, "applicationData")
 	session.Values["userName"] = nil
 	session.Save(r, w)
 	http.Redirect(w, r, "/", 302)
