@@ -34,13 +34,11 @@ type UrlElement struct {
 	Reg *string `db:"reg"`
 }
 
-type Url string
-
 var (
 	configFile     = flag.String("Config", "conf.json", "Where to read the Config from")
 	servicePort    = flag.Int("Port", 4002, "Application port")
 	configFilePath = flag.String("ConfigFilePath", "squid_acl", "Config file path")
-	store          = sessions.NewCookieStore([]byte(config.SessionKey))
+	store          *sessions.CookieStore
 )
 
 var config struct {
@@ -59,7 +57,12 @@ func loadConfig(path string) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(jsonData, &config)
+	err = json.Unmarshal(jsonData, &config)
+	if err != nil {
+		return err
+	}
+	store = sessions.NewCookieStore([]byte(config.SessionKey))
+	return nil
 }
 
 func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
