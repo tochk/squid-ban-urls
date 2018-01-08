@@ -1,0 +1,30 @@
+{% func AddPage() %}
+{%= Head("Добавление сайтов") %}
+{%= Menu(true) %}
+<form class="form-horizontal" action="/addUrlToDb/" method="post" style="width: 800px">
+    <fieldset id="form_cont">
+        <legend>Добавление сайта</legend>
+        <div class="input_forms">
+            <h2 class='title'>Введите документ</h2>
+            <div class="form-group">
+                <textarea id="doc" class="form-control mac_valid mac" required></textarea>
+                <a id="addText" href="#" class="btn btn-raised btn-info addNew">Получить ссылки
+                    <div class="ripple-container"></div>
+                </a>
+            </div>
+        </div>
+        <div class="form-group">
+            <a id="addNew" href="#" class="btn btn-raised btn-info addNew">Добавить URL
+                <div class="ripple-container"></div>
+            </a>
+        </div>
+        <div class="form-group">
+            <div class="col-md-10 col-md-offset-2">
+                <button type="button" id="cancel" class="btn btn-default">Удалить последний URL</button>
+                <button type="submit" disabled="disabled" id="sbm" class="btn btn-primary">Добавить</button>
+            </div>
+        </div>
+    </fieldset>
+</form>
+{%= Footer() %}
+{% endfunc %}

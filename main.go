@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
+	"github.com/tochk/squid-ban-urls/templates"
 	"gopkg.in/ldap.v2"
 )
 
@@ -28,11 +28,9 @@ type server struct {
 	dc *dbus.Conn
 }
 
-type UrlElement struct {
-	Id  int     `db:"id"`
-	Url string  `db:"url"`
-	Reg *string `db:"reg"`
-}
+type UrlElement = templates.UrlElement
+
+type Pagination = templates.Pagination
 
 var (
 	configFile     = flag.String("Config", "conf.json", "Where to read the Config from")
@@ -113,39 +111,52 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
-	latexTemplate, err := template.ParseFiles("templates/urlList.tmpl.html")
-	if err != nil {
+	url := strings.Split(r.URL.Path, "/")
+	var urlList []UrlElement
+	var pagination Pagination
+	if url[2] == "page" {
+		page, err := strconv.Atoi(url[3])
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		pagination = s.paginationCalc(page, 50)
+	} else {
+		pagination = s.paginationCalc(1, 50)
+	}
+	if err := s.Db.Select(&urlList, "SELECT id, url, reg FROM urls ORDER BY id DESC LIMIT ? OFFSET ?", 50, pagination.Offset); err != nil {
 		log.Println(err)
 		return
 	}
-	urlList := make([]UrlElement, 0)
-	if err := s.Db.Select(&urlList, "SELECT id, url, reg FROM urls ORDER BY id DESC"); err != nil {
-		log.Println(err)
-		return
-	}
-	err = latexTemplate.Execute(w, urlList)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	fmt.Fprint(w, templates.ListPage(pagination, urlList))
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
-	if session.Values["userName"] != nil {
-		http.Redirect(w, r, "/add/", 302)
-		return
-	}
-	latexTemplate, err := template.ParseFiles("templates/index.tmpl.html")
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	err = latexTemplate.Execute(w, nil)
-	if err != nil {
-		log.Println(err)
-		return
+	switch r.URL.Path {
+	case "/login/":
+		r.ParseForm()
+		userName, err := auth(r.PostForm.Get("login"), r.PostForm.Get("password"))
+		if err != nil {
+			log.Println(err)
+			http.Redirect(w, r, "/", 302)
+		} else {
+			session, _ = store.Get(r, "applicationData")
+			session.Values["userName"] = userName
+			session.Save(r, w)
+			http.Redirect(w, r, "/add/", 302)
+		}
+	case "/logout/":
+		session.Values["userName"] = nil
+		session.Save(r, w)
+		http.Redirect(w, r, "/", 302)
+	default:
+		if session.Values["userName"] != nil {
+			http.Redirect(w, r, "/add/", 302)
+			return
+		}
+		fmt.Fprint(w, templates.LoginPage())
 	}
 }
 
@@ -156,16 +167,7 @@ func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
-	latexTemplate, err := template.ParseFiles("templates/add.tmpl.html")
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	err = latexTemplate.Execute(w, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	fmt.Fprint(w, templates.AddPage())
 }
 
 func auth(login, password string) (username string, err error) {
@@ -206,29 +208,6 @@ func auth(login, password string) (username string, err error) {
 	}
 
 	return
-}
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Loaded login page from " + r.RemoteAddr)
-	r.ParseForm()
-	session, _ := store.Get(r, "applicationData")
-	userName, err := auth(r.Form["login"][0], r.Form["password"][0])
-	if err != nil {
-		http.Redirect(w, r, "/", 302)
-	} else {
-		session, _ = store.Get(r, "applicationData")
-		session.Values["userName"] = userName
-		session.Save(r, w)
-		http.Redirect(w, r, "/add/", 302)
-	}
-}
-
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Loaded logout page from " + r.RemoteAddr)
-	session, _ := store.Get(r, "applicationData")
-	session.Values["userName"] = nil
-	session.Save(r, w)
-	http.Redirect(w, r, "/", 302)
 }
 
 func (s *server) reload() error {
@@ -282,6 +261,36 @@ func (s *server) generateConfig() (string, error) {
 	return strings.Join(r, "\n"), nil
 }
 
+func (s *server) paginationCalc(page, perPage int) Pagination {
+	var (
+		count      int
+		pagination Pagination
+		err        error
+	)
+	if page < 1 {
+		page = 1
+	}
+	pagination.CurrentPage = page
+	pagination.PerPage = perPage
+	pagination.Offset = perPage * (page - 1)
+	err = s.Db.Get(&count, "SELECT COUNT(*) FROM urls")
+
+	if err != nil {
+		log.Println(err)
+		return Pagination{}
+	}
+	if count > perPage*page {
+		pagination.NextPage = pagination.CurrentPage + 1
+		if pagination.NextPage != (count/perPage)+1 {
+			pagination.LastPage = (count / perPage) + 1
+		}
+	}
+	if pagination.CurrentPage > 1 {
+		pagination.PrevPage = pagination.CurrentPage - 1
+	}
+	return pagination
+}
+
 func main() {
 	flag.Parse()
 	err := loadConfig(*configFile)
@@ -297,21 +306,20 @@ func main() {
 	defer s.Db.Close()
 	log.Printf("Connected to database on %s", config.MysqlHost)
 
-	if s.dc, err = dbus.New(); err != nil {
-		log.Fatal(err)
-	}
+	//if s.dc, err = dbus.New(); err != nil {
+	//	log.Fatal(err)
+	//}
 
-	go s.run()
+	//go s.run()
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
+
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/add/", s.addHandler)
 	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
 	http.HandleFunc("/deleteUrl/", s.deleteUrlHandler)
 	http.HandleFunc("/urlList/", s.urlListHandler)
-	http.HandleFunc("/login/", loginHandler)
-	http.HandleFunc("/logout/", logoutHandler)
 	log.Print("Server started at port " + strconv.Itoa(*servicePort))
 	err = http.ListenAndServe(":"+strconv.Itoa(*servicePort), nil)
 	if err != nil {

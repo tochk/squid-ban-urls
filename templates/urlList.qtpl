@@ -1,0 +1,33 @@
+{% code
+type UrlElement struct {
+Id  int     `db:"id"`
+Url string  `db:"url"`
+Reg *string `db:"reg"`
+}
+%}
+
+{% func ListPage(pagination Pagination, urls []UrlElement) %}
+{%= Head("Список сайтов") %}
+{%= Menu(true) %}
+<div>
+    <table class="table table-striped table-hover" id="someid" style="width: 80%; margin: 0 auto">
+        <thead>
+        <tr>
+            <th>Url</th>
+            <th class="col-xs-2">Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for _, e := range urls %}
+        <tr>
+            <td style="padding: 15px;">{%s e.Url %}</td>
+            <td class="col-xs-2"><a style="margin: 0; padding-right: 20px" href="/deleteUrl/{%d e.Id %}"
+                                    class="btn btn-danger">Delete</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {%= PrintPagination(pagination, "/urlList/") %}
+</div>
+{%= Footer() %}
+{% endfunc %}
