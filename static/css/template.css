@@ -165,3 +165,8 @@ top:-17px;
 .btn-primary{
 float: right;
 }
+
+.pagination-container {
+    margin: 0 auto;
+    text-align: center;
+}

@@ -34,7 +34,7 @@ PerPage     int
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="/">Kirino</a>
+            <a class="navbar-brand" href="/">Ban URL's</a>
         </div>
         <div class="navbar-collapse collapse navbar-responsive-collapse">
             {% if isAdmin %}

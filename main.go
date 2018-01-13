@@ -171,6 +171,9 @@ func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func auth(login, password string) (username string, err error) {
+	if password == "" {
+		return "", errors.New("empty password")
+	}
 	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", "main.sgu.ru", 389))
 	if err != nil {
 		return
@@ -306,11 +309,11 @@ func main() {
 	defer s.Db.Close()
 	log.Printf("Connected to database on %s", config.MysqlHost)
 
-	//if s.dc, err = dbus.New(); err != nil {
-	//	log.Fatal(err)
-	//}
+	if s.dc, err = dbus.New(); err != nil {
+		log.Fatal(err)
+	}
 
-	//go s.run()
+	go s.run()
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
