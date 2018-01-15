@@ -201,7 +201,7 @@ func auth(login, password string) (username string, err error) {
 	if len(sr.Entries) == 1 {
 		username = sr.Entries[0].GetAttributeValue("cn")
 	} else {
-		err = errors.New("User not found")
+		err = errors.New("user not found")
 		return
 	}
 
@@ -309,11 +309,11 @@ func main() {
 	defer s.Db.Close()
 	log.Printf("Connected to database on %s", config.MysqlHost)
 
-	if s.dc, err = dbus.New(); err != nil {
-		log.Fatal(err)
-	}
+	//if s.dc, err = dbus.New(); err != nil {
+	//	log.Fatal(err)
+	//}
 
-	go s.run()
+	//go s.run()
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
