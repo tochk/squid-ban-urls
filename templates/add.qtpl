@@ -1,7 +1,7 @@
 {% func AddPage() %}
 {%= Head("Добавление сайтов") %}
 {%= Menu(true) %}
-<form class="form-horizontal" action="/addUrlToDb/" method="post" style="width: 800px">
+<form class="form-horizontal" action="/add/" method="post" style="width: 800px">
     <fieldset id="form_cont">
         <legend>Добавление сайта</legend>
         <div class="input_forms">

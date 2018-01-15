@@ -33,10 +33,12 @@ type UrlElement = templates.UrlElement
 type Pagination = templates.Pagination
 
 var (
-	configFile     = flag.String("Config", "conf.json", "Where to read the Config from")
-	servicePort    = flag.Int("Port", 4002, "Application port")
-	configFilePath = flag.String("ConfigFilePath", "squid_acl", "Config file path")
-	store          *sessions.CookieStore
+	configFile      = flag.String("config", "conf.json", "Where to read the config from")
+	servicePort     = flag.Int("port", 4002, "Application port")
+	configFilePath  = flag.String("squid_config_path", "squid_acl", "Config file path")
+	perPage         = flag.Int("per_page", 50, "URL's per page")
+	restartInterval = flag.Int("restart_interval", 30, "Squid restart interval (seconds)")
+	store           *sessions.CookieStore
 )
 
 var config struct {
@@ -63,26 +65,6 @@ func loadConfig(path string) error {
 	return nil
 }
 
-func (s *server) addUrlToDbHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
-	session, _ := store.Get(r, "applicationData")
-	if session.Values["userName"] == nil {
-		http.Redirect(w, r, "/", 302)
-		return
-	}
-	err := r.ParseForm()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	tx := s.Db.MustBegin()
-	for i := 1; i <= len(r.Form); i++ {
-		tx.MustExec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("url"+strconv.Itoa(i)), "(/.*?)")
-	}
-	tx.Commit()
-	http.Redirect(w, r, "/urlList/", 302)
-}
-
 func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
@@ -101,7 +83,7 @@ func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	http.Redirect(w, r, "/urlList/", 302)
+	http.Redirect(w, r, "/list/", 302)
 }
 
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
@@ -112,23 +94,29 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	url := strings.Split(r.URL.Path, "/")
-	var urlList []UrlElement
 	var pagination Pagination
-	if url[2] == "page" {
+	switch url[2] {
+	case "page":
 		page, err := strconv.Atoi(url[3])
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		pagination = s.paginationCalc(page, 50)
-	} else {
+	default:
 		pagination = s.paginationCalc(1, 50)
 	}
-	if err := s.Db.Select(&urlList, "SELECT id, url, reg FROM urls ORDER BY id DESC LIMIT ? OFFSET ?", 50, pagination.Offset); err != nil {
+	urlList, err := s.getUrlListPagination(pagination.Offset)
+	if err != nil {
 		log.Println(err)
 		return
 	}
 	fmt.Fprint(w, templates.ListPage(pagination, urlList))
+}
+
+func (s *server) getUrlListPagination(offset int) (urlList []UrlElement, err error) {
+	err = s.Db.Select(&urlList, "SELECT id, url, reg FROM urls ORDER BY id DESC LIMIT ? OFFSET ?", *perPage, offset)
+	return
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -167,7 +155,24 @@ func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
-	fmt.Fprint(w, templates.AddPage())
+	if r.Method == "GET" {
+		fmt.Fprint(w, templates.AddPage())
+	} else {
+		r.ParseForm()
+		for i := 1; i <= len(r.Form); i++ {
+			_, err := s.Db.Exec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("url"+strconv.Itoa(i)), "(/.*?)")
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+		_, err := s.Db.Exec("DELETE n1 FROM urls n1, urls n2 WHERE n1.id > n2.id AND n1.url = n2.url")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		http.Redirect(w, r, "/list/", 302)
+	}
 }
 
 func auth(login, password string) (username string, err error) {
@@ -215,18 +220,18 @@ func auth(login, password string) (username string, err error) {
 
 func (s *server) reload() error {
 	st := time.Now()
-	newconf, err := s.generateConfig()
+	newConf, err := s.generateConfig()
 	if err != nil {
 		return err
 	}
 	log.Printf("Config build finished in %s", time.Now().Sub(st))
-	oldconf, err := ioutil.ReadFile(*configFilePath)
-	if bytes.Equal([]byte(newconf), oldconf) {
+	oldConf, err := ioutil.ReadFile(*configFilePath)
+	if bytes.Equal([]byte(newConf), oldConf) {
 		log.Println("Old config matches new")
 		return nil
 	}
 	log.Println("Writing new config")
-	if err = ioutil.WriteFile(*configFilePath, []byte(newconf), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(*configFilePath, []byte(newConf), os.ModePerm); err != nil {
 		return err
 	}
 	log.Printf("Write finished in %s", time.Now().Sub(st))
@@ -248,7 +253,7 @@ func (s *server) run() {
 		if err := s.reload(); err != nil {
 			log.Printf("reload error: %s", err)
 		}
-		time.Sleep(time.Second * 30)
+		time.Sleep(time.Second * time.Duration(*restartInterval))
 	}
 }
 
@@ -320,9 +325,7 @@ func main() {
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/add/", s.addHandler)
-	http.HandleFunc("/addUrlToDb/", s.addUrlToDbHandler)
-	http.HandleFunc("/deleteUrl/", s.deleteUrlHandler)
-	http.HandleFunc("/urlList/", s.urlListHandler)
+	http.HandleFunc("/list/", s.urlListHandler)
 	log.Print("Server started at port " + strconv.Itoa(*servicePort))
 	err = http.ListenAndServe(":"+strconv.Itoa(*servicePort), nil)
 	if err != nil {

@@ -41,7 +41,7 @@ PerPage     int
             <div class="navbar-collapse collapse navbar-responsive-collapse">
                 <ul class="nav navbar-nav">
                     <li><a href="/add/">Add URL</a></li>
-                    <li><a href="/urlList/">URL List</a></li>
+                    <li><a href="/list/">URL List</a></li>
                 </ul>
 
                 <ul class="nav navbar-nav navbar-right">

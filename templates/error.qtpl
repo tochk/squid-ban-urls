@@ -1,0 +1,3 @@
+{% func ErrorPage(err error) %}
+Error occurred in application: {%s err.Error() %}. Contact developer.
+{% endfunc %}

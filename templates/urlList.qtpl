@@ -11,7 +11,7 @@ Reg *string `db:"reg"`
 {%= Menu(true) %}
 <div>
     <div style="margin: 0 auto;text-align: center">
-        <form action="/urlList/search" method="post">
+        <form action="/list/search" method="post">
             <div class="form-group col-xs-8">
                 <input class="form-control" name="query" placeholder="URL" required>
             </div>
@@ -38,7 +38,7 @@ Reg *string `db:"reg"`
         {% endfor %}
         </tbody>
     </table>
-    {%= PrintPagination(pagination, "/urlList/") %}
+    {%= PrintPagination(pagination, "/list/") %}
 </div>
 {%= Footer() %}
 {% endfunc %}
