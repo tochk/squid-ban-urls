@@ -65,27 +65,6 @@ func loadConfig(path string) error {
 	return nil
 }
 
-func (s *server) deleteUrlHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
-	session, _ := store.Get(r, "applicationData")
-	if session.Values["userName"] == nil {
-		http.Redirect(w, r, "/", 302)
-		return
-	}
-	urlId := r.URL.Path[len("/deleteUrl/"):]
-	err := r.ParseForm()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	_, err = s.Db.Exec("DELETE FROM `urls` WHERE `id` = ?", urlId)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	http.Redirect(w, r, "/list/", 302)
-}
-
 func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.RemoteAddr)
 	session, _ := store.Get(r, "applicationData")
@@ -96,6 +75,16 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 	url := strings.Split(r.URL.Path, "/")
 	var pagination Pagination
 	switch url[2] {
+	case "search":
+		r.ParseForm()
+		urlList, err := s.searchUrl(r.PostForm.Get("query"))
+		if err != nil {
+			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
+			return
+		}
+		fmt.Fprint(w, templates.ListPage(pagination, urlList))
+		return
 	case "page":
 		page, err := strconv.Atoi(url[3])
 		if err != nil {
@@ -103,6 +92,18 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		pagination = s.paginationCalc(page, 50)
+	case "delete":
+		id, err := strconv.Atoi(url[3])
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		_, err = s.Db.Exec("DELETE FROM `urls` WHERE `id` = ?", id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		http.Redirect(w, r, "/list/", 302)
 	default:
 		pagination = s.paginationCalc(1, 50)
 	}
@@ -115,7 +116,12 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getUrlListPagination(offset int) (urlList []UrlElement, err error) {
-	err = s.Db.Select(&urlList, "SELECT id, url, reg FROM urls ORDER BY id DESC LIMIT ? OFFSET ?", *perPage, offset)
+	err = s.Db.Select(&urlList, "SELECT id, url FROM urls ORDER BY id DESC LIMIT ? OFFSET ?", *perPage, offset)
+	return
+}
+
+func (s *server) searchUrl(query string) (urlList []UrlElement, err error) {
+	err = s.Db.Select(&urlList, "SELECT id, url FROM urls WHERE url LIKE CONCAT('%', ?, '%') ORDER BY id DESC", query)
 	return
 }
 
@@ -159,14 +165,18 @@ func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, templates.AddPage())
 	} else {
 		r.ParseForm()
+		urls := make([]interface{}, 0, len(r.Form))
+		queryPart := make([]string, 0, len(r.Form))
 		for i := 1; i <= len(r.Form); i++ {
-			_, err := s.Db.Exec("INSERT INTO `urls` (`url`, `reg`) VALUES (?, ?)", r.PostFormValue("url"+strconv.Itoa(i)), "(/.*?)")
-			if err != nil {
-				log.Println(err)
-				return
-			}
+			urls = append(urls, r.PostForm.Get("url"+strconv.Itoa(i)))
+			queryPart = append(queryPart, "(?)")
 		}
-		_, err := s.Db.Exec("DELETE n1 FROM urls n1, urls n2 WHERE n1.id > n2.id AND n1.url = n2.url")
+		_, err := s.Db.Exec("INSERT INTO `urls` (`url`) VALUES " + strings.Join(queryPart, ","), urls...)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		_, err = s.Db.Exec("DELETE n1 FROM urls n1, urls n2 WHERE n1.id > n2.id AND n1.url = n2.url")
 		if err != nil {
 			log.Println(err)
 			return
@@ -282,11 +292,11 @@ func (s *server) paginationCalc(page, perPage int) Pagination {
 	pagination.PerPage = perPage
 	pagination.Offset = perPage * (page - 1)
 	err = s.Db.Get(&count, "SELECT COUNT(*) FROM urls")
-
 	if err != nil {
 		log.Println(err)
 		return Pagination{}
 	}
+
 	if count > perPage*page {
 		pagination.NextPage = pagination.CurrentPage + 1
 		if pagination.NextPage != (count/perPage)+1 {

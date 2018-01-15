@@ -2,7 +2,6 @@
 type UrlElement struct {
 Id  int     `db:"id"`
 Url string  `db:"url"`
-Reg *string `db:"reg"`
 }
 %}
 
@@ -18,7 +17,6 @@ Reg *string `db:"reg"`
             <label class="btn btn-success col-xs-2 submitButton">
                 Search <input type="submit" style="display: none">
             </label>
-
         </form>
     </div>
     <table class="table table-striped table-hover" id="someid" style="width: 80%; margin: 0 auto">
@@ -32,13 +30,15 @@ Reg *string `db:"reg"`
         {% for _, e := range urls %}
         <tr>
             <td style="padding: 15px;">{%s e.Url %}</td>
-            <td><a style="margin: 0;width: 100%" href="/deleteUrl/{%d e.Id %}"
+            <td><a style="margin: 0;width: 100%" href="/list/delete/{%d e.Id %}"
                                     class="btn btn-danger">Delete</a></td>
         </tr>
         {% endfor %}
         </tbody>
     </table>
+    {% if pagination.CurrentPage != 0 %}
     {%= PrintPagination(pagination, "/list/") %}
+    {% endif %}
 </div>
 {%= Footer() %}
 {% endfunc %}
