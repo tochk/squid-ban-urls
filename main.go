@@ -89,6 +89,7 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		page, err := strconv.Atoi(url[3])
 		if err != nil {
 			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
 			return
 		}
 		pagination = s.paginationCalc(page, 50)
@@ -96,11 +97,13 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(url[3])
 		if err != nil {
 			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
 			return
 		}
 		_, err = s.Db.Exec("DELETE FROM `urls` WHERE `id` = ?", id)
 		if err != nil {
 			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
 			return
 		}
 		http.Redirect(w, r, "/list/", 302)
@@ -110,6 +113,7 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 	urlList, err := s.getUrlListPagination(pagination.Offset)
 	if err != nil {
 		log.Println(err)
+		fmt.Fprint(w, templates.ErrorPage(err))
 		return
 	}
 	fmt.Fprint(w, templates.ListPage(pagination, urlList))
@@ -174,11 +178,13 @@ func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
 		_, err := s.Db.Exec("INSERT INTO `urls` (`url`) VALUES " + strings.Join(queryPart, ","), urls...)
 		if err != nil {
 			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
 			return
 		}
 		_, err = s.Db.Exec("DELETE n1 FROM urls n1, urls n2 WHERE n1.id > n2.id AND n1.url = n2.url")
 		if err != nil {
 			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
 			return
 		}
 		http.Redirect(w, r, "/list/", 302)
