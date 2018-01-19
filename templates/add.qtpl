@@ -8,13 +8,13 @@
             <h2 class='title'>Введите документ</h2>
             <div class="form-group">
                 <textarea id="doc" class="form-control mac_valid mac" required></textarea>
-                <a id="addText" href="#" class="btn btn-raised btn-info addNew">Получить ссылки
+                <a id="addText" class="btn btn-raised btn-info addNew">Получить ссылки
                     <div class="ripple-container"></div>
                 </a>
             </div>
         </div>
         <div class="form-group">
-            <a id="addNew" href="#" class="btn btn-raised btn-info addNew">Добавить URL
+            <a id="addNew" class="btn btn-raised btn-info addNew">Добавить URL
                 <div class="ripple-container"></div>
             </a>
         </div>

@@ -8,18 +8,21 @@ Url string  `db:"url"`
 {% func ListPage(pagination Pagination, urls []UrlElement) %}
 {%= Head("Список сайтов") %}
 {%= Menu(true) %}
-<div>
-    <div style="margin: 0 auto;text-align: center">
-        <form action="/list/search" method="post">
-            <div class="form-group col-xs-8">
+
+<div class="container">
+        <form id="searchForm" class="row" action="/list/search" method="post">
+            <div class="form-group col-lg-10">
                 <input class="form-control" name="query" placeholder="URL" required>
             </div>
-            <label class="btn btn-success col-xs-2 submitButton">
-                Search <input type="submit" style="display: none">
-            </label>
+            <div class="col-lg-2 search-button">
+                <label class="btn btn-primary col-lg-12 submitButton">
+                    Search <input type="submit" style="display: none">
+                </label>
+            </div>
         </form>
-    </div>
-    <table class="table table-striped table-hover" id="someid" style="width: 80%; margin: 0 auto">
+</div>
+<div class="container">
+    <table class="table table-striped table-hover">
         <thead>
         <tr>
             <th class="col-xs-10">Url</th>
@@ -31,14 +34,15 @@ Url string  `db:"url"`
         <tr>
             <td style="padding: 15px;">{%s e.Url %}</td>
             <td><a style="margin: 0;width: 100%" href="/list/delete/{%d e.Id %}"
-                                    class="btn btn-danger">Delete</a></td>
+                   class="btn btn-danger">Delete</a></td>
         </tr>
         {% endfor %}
         </tbody>
     </table>
-    {% if pagination.CurrentPage != 0 %}
-    {%= PrintPagination(pagination, "/list/") %}
-    {% endif %}
 </div>
+{% if pagination.CurrentPage != 0 %}
+{%= PrintPagination(pagination, "/list/") %}
+{% endif %}
+
 {%= Footer() %}
 {% endfunc %}

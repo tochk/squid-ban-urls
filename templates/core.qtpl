@@ -20,7 +20,6 @@ PerPage     int
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-<div id="blurr">
 {% endfunc %}
 
 
@@ -55,7 +54,7 @@ PerPage     int
 {% endfunc %}
 
 {% func Footer() %}
-</div>
+
 
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 <script src="/static/js/bootstrap.min.js"></script>
