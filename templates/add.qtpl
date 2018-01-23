@@ -7,7 +7,7 @@
         <div class="input_forms">
             <h2 class='title'>Введите документ</h2>
             <div class="form-group">
-                <textarea id="doc" class="form-control mac_valid mac" required></textarea>
+                <textarea id="doc" class="form-control mac_valid mac"></textarea>
                 <a id="addText" class="btn btn-raised btn-info addNew">Получить ссылки
                     <div class="ripple-container"></div>
                 </a>

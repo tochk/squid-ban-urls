@@ -70,22 +70,22 @@ PerPage     int
 </html>
 {% endfunc %}
 
-{% func PrintPagination(pagination Pagination, baseUrl string) %}
+{% func PrintPagination(pagination Pagination, baseUrl, query string) %}
 <div class="pagination-container">
     <ul class="pagination">
         {% if pagination.CurrentPage != 1 %}
-        <li><a href="{%s baseUrl %}">1</a></li>
+        <li><a href="{%s baseUrl %}{% if len(query) != 0 %}?search={%s query %}{% endif %}">1</a></li>
         {% endif %}
         {% if pagination.PrevPage > 1 %}
-        <li><a href="{%s baseUrl %}page/{%d pagination.PrevPage %}">{%d pagination.PrevPage %}</a></li>
+        <li><a href="{%s baseUrl %}?page={%d pagination.PrevPage %}{% if len(query) != 0 %}&search={%s query %}{% endif %}">{%d pagination.PrevPage %}</a></li>
         {% endif %}
-        <li class="active"><a href="{%s baseUrl %}page/{%d pagination.CurrentPage %}">{%d pagination.CurrentPage %}</a>
+        <li class="active"><a href="{%s baseUrl %}?page={%d pagination.CurrentPage %}{% if len(query) != 0 %}&search={%s query %}{% endif %}">{%d pagination.CurrentPage %}</a>
         </li>
         {% if pagination.NextPage != 0 %}
-        <li><a href="{%s baseUrl %}page/{%d pagination.NextPage %}">{%d pagination.NextPage %}</a></li>
+        <li><a href="{%s baseUrl %}?page={%d pagination.NextPage %}{% if len(query) != 0 %}&search={%s query %}{% endif %}">{%d pagination.NextPage %}</a></li>
         {% endif %}
         {% if pagination.LastPage != 0 %}
-        <li><a href="{%s baseUrl %}page/{%d pagination.LastPage %}">{%d pagination.LastPage %}</a></li>
+        <li><a href="{%s baseUrl %}?page={%d pagination.LastPage %}{% if len(query) != 0 %}&search={%s query %}{% endif %}">{%d pagination.LastPage %}</a></li>
         {% endif %}
     </ul>
 </div>

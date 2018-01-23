@@ -5,14 +5,14 @@ Url string  `db:"url"`
 }
 %}
 
-{% func ListPage(pagination Pagination, urls []UrlElement) %}
+{% func ListPage(pagination Pagination, urls []UrlElement, query string) %}
 {%= Head("Список сайтов") %}
 {%= Menu(true) %}
 
 <div class="container">
-        <form id="searchForm" class="row" action="/list/search" method="post">
+        <form id="searchForm" class="row" action="/list/" method="get">
             <div class="form-group col-lg-10">
-                <input class="form-control" name="query" placeholder="URL" required>
+                <input class="form-control" name="search" placeholder="URL" {% if len(query) != 0 %} value="{%s query %}" {% endif %}>
             </div>
             <div class="col-lg-2 search-button">
                 <label class="btn btn-primary col-lg-12 submitButton">
@@ -41,7 +41,7 @@ Url string  `db:"url"`
     </table>
 </div>
 {% if pagination.CurrentPage != 0 %}
-{%= PrintPagination(pagination, "/list/") %}
+{%= PrintPagination(pagination, "/list/", query) %}
 {% endif %}
 
 {%= Footer() %}

@@ -72,28 +72,13 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
+	var (
+		pagination Pagination
+		urlList    []UrlElement
+		query      string
+	)
 	url := strings.Split(r.URL.Path, "/")
-	var pagination Pagination
-	switch url[2] {
-	case "search":
-		r.ParseForm()
-		urlList, err := s.searchUrl(r.PostForm.Get("query"))
-		if err != nil {
-			log.Println(err)
-			fmt.Fprint(w, templates.ErrorPage(err))
-			return
-		}
-		fmt.Fprint(w, templates.ListPage(pagination, urlList))
-		return
-	case "page":
-		page, err := strconv.Atoi(url[3])
-		if err != nil {
-			log.Println(err)
-			fmt.Fprint(w, templates.ErrorPage(err))
-			return
-		}
-		pagination = s.paginationCalc(page, 50)
-	case "delete":
+	if url[2] == "delete" {
 		id, err := strconv.Atoi(url[3])
 		if err != nil {
 			log.Println(err)
@@ -107,25 +92,74 @@ func (s *server) urlListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Redirect(w, r, "/list/", 302)
-	default:
-		pagination = s.paginationCalc(1, 50)
-	}
-	urlList, err := s.getUrlListPagination(pagination.Offset)
-	if err != nil {
-		log.Println(err)
-		fmt.Fprint(w, templates.ErrorPage(err))
 		return
 	}
-	fmt.Fprint(w, templates.ListPage(pagination, urlList))
+	if len(r.URL.Query().Get("search")) != 0 {
+		query = r.URL.Query().Get("search")
+		count, err := s.searchCount(r.URL.Query().Get("search"))
+		if err != nil {
+			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
+			return
+		}
+
+		if len(r.URL.Query().Get("page")) != 0 {
+			page, err := strconv.Atoi(r.URL.Query().Get("page"))
+			if err != nil {
+				log.Println(err)
+				fmt.Fprint(w, templates.ErrorPage(err))
+				return
+			}
+			pagination = s.paginationCalc(page, count)
+		} else {
+			pagination = s.paginationCalc(1, count)
+		}
+		urlList, err = s.searchUrl(r.URL.Query().Get("search"), pagination.Offset)
+		if err != nil {
+			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
+			return
+		}
+	} else {
+		page, err := strconv.Atoi(r.URL.Query().Get("page"))
+		if err != nil {
+			page = 1
+		}
+		count, err := s.searchCount(r.URL.Query().Get("search"))
+		if err != nil {
+			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
+			return
+		}
+		pagination = s.paginationCalc(page, count)
+		urlList, err = s.getUrlList(pagination.Offset)
+		if err != nil {
+			log.Println(err)
+			fmt.Fprint(w, templates.ErrorPage(err))
+			return
+		}
+	}
+
+	fmt.Fprint(w, templates.ListPage(pagination, urlList, query))
 }
 
-func (s *server) getUrlListPagination(offset int) (urlList []UrlElement, err error) {
+func (s *server) getCount() (count int, err error) {
+	err = s.Db.Get(&count, "SELECT COUNT(*) FROM urls")
+	return
+}
+
+func (s *server) getUrlList(offset int) (urlList []UrlElement, err error) {
 	err = s.Db.Select(&urlList, "SELECT id, url FROM urls ORDER BY id DESC LIMIT ? OFFSET ?", *perPage, offset)
 	return
 }
 
-func (s *server) searchUrl(query string) (urlList []UrlElement, err error) {
-	err = s.Db.Select(&urlList, "SELECT id, url FROM urls WHERE url LIKE CONCAT('%', ?, '%') ORDER BY id DESC", query)
+func (s *server) searchCount(query string) (count int, err error) {
+	err = s.Db.Get(&count, "SELECT COUNT(*) FROM urls WHERE url LIKE CONCAT('%', ?, '%')", query)
+	return
+}
+
+func (s *server) searchUrl(query string, offset int) (urlList []UrlElement, err error) {
+	err = s.Db.Select(&urlList, "SELECT id, url FROM urls WHERE url LIKE CONCAT('%', ?, '%') ORDER BY id DESC LIMIT ? OFFSET ?", query, *perPage, offset)
 	return
 }
 
@@ -175,7 +209,7 @@ func (s *server) addHandler(w http.ResponseWriter, r *http.Request) {
 			urls = append(urls, r.PostForm.Get("url"+strconv.Itoa(i)))
 			queryPart = append(queryPart, "(?)")
 		}
-		_, err := s.Db.Exec("INSERT INTO `urls` (`url`) VALUES " + strings.Join(queryPart, ","), urls...)
+		_, err := s.Db.Exec("INSERT INTO `urls` (`url`) VALUES "+strings.Join(queryPart, ","), urls...)
 		if err != nil {
 			log.Println(err)
 			fmt.Fprint(w, templates.ErrorPage(err))
@@ -285,28 +319,18 @@ func (s *server) generateConfig() (string, error) {
 	return strings.Join(r, "\n"), nil
 }
 
-func (s *server) paginationCalc(page, perPage int) Pagination {
-	var (
-		count      int
-		pagination Pagination
-		err        error
-	)
+func (s *server) paginationCalc(page, count int) (pagination Pagination) {
 	if page < 1 {
 		page = 1
 	}
 	pagination.CurrentPage = page
-	pagination.PerPage = perPage
-	pagination.Offset = perPage * (page - 1)
-	err = s.Db.Get(&count, "SELECT COUNT(*) FROM urls")
-	if err != nil {
-		log.Println(err)
-		return Pagination{}
-	}
+	pagination.PerPage = *perPage
+	pagination.Offset = *perPage * (page - 1)
 
-	if count > perPage*page {
+	if count > *perPage*page {
 		pagination.NextPage = pagination.CurrentPage + 1
-		if pagination.NextPage != (count/perPage)+1 {
-			pagination.LastPage = (count / perPage) + 1
+		if pagination.NextPage != (count / *perPage)+1 {
+			pagination.LastPage = (count / *perPage) + 1
 		}
 	}
 	if pagination.CurrentPage > 1 {
