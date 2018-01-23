@@ -2,7 +2,7 @@
 
 Application for ban users in squid proxy server
 
-db scheme stored in ./db.sql
+db scheme stored in [db.sql](https://github.com/tochk/squid-ban-urls/blob/master/db.sql)
 
 ## conf.json example
 
