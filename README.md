@@ -6,6 +6,7 @@ Application for ban users in squid proxy server
 
 Don't forget about secure session key
 
+```
 {
   "mysqlLogin": "root",
   "mysqlPassword": "",
@@ -18,9 +19,11 @@ Don't forget about secure session key
   "ldapPort": 389,
   "sessionKey": "GENERATE KEY FOR SESSIONS"
 }
+```
 
 ## Flags
 
+```
 Usage of /home/tochk/prj//bin/squid-ban-urls:
   -config string
         Where to read the config from (default "conf.json")
@@ -32,3 +35,4 @@ Usage of /home/tochk/prj//bin/squid-ban-urls:
         Squid restart interval (seconds) (default 30)
   -squid_config_path string
         Config file path (default "squid_acl")
+```
