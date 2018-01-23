@@ -49,6 +49,8 @@ var config struct {
 	LdapUser      string `json:"ldapUser"`
 	LdapPassword  string `json:"ldapPassword"`
 	LdapBaseDN    string `json:"ldapBaseDN"`
+	LdapAddress   string `json:"ldapAddress"`
+	LdapPort      int    `json:"ldapPort"`
 	SessionKey    string `json:"sessionKey"`
 }
 
@@ -229,7 +231,7 @@ func auth(login, password string) (username string, err error) {
 	if password == "" {
 		return "", errors.New("empty password")
 	}
-	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", "main.sgu.ru", 389))
+	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", config.LdapAddress, config.LdapPort))
 	if err != nil {
 		return
 	}
