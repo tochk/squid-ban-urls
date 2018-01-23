@@ -2,6 +2,8 @@
 
 Application for ban users in squid proxy server
 
+db scheme stored in ./db.sql
+
 ## conf.json example
 
 Don't forget about secure session key
