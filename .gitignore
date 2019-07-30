@@ -95,3 +95,4 @@ fabric.properties
 .idea
 conf.json
 *.qtpl.go
+bin
